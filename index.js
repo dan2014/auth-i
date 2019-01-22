@@ -2,6 +2,7 @@ const express = require("express");
 const helmet = require("helmet");
 const bcrypt = require("bcryptjs");
 const knex = require("knex");
+const knexConfig = require('./knexfile.js');
 const db = knex(knexConfig.development);
 const server = express();
 
@@ -18,6 +19,7 @@ server.post("/users/register", (req,res) => {
 
     const hash = bcrypt.hashSync(userInfo.password,12);
     userInfo.password = hash;
+    console.log(hash)
 
     db('users')
     .insert(userInfo)
@@ -25,6 +27,25 @@ server.post("/users/register", (req,res) => {
         res.status(201).json(ids);
     })
     .catch(err => res.status(500).json(err));
+});
+
+server.post("/login", (req,res) => {
+    const creds = req.body;
+
+    db("users")
+    .where({username: creds.username})
+    .first()
+    .then(user => {
+        if (user && bcrypt.compareSync(creds.password,user.password)){
+            res.status(200).json({message:`Welcome ${user.name}`})
+        } else {
+            res.status(401).json({message:`Username and/or password are incorrect`})
+        }
+    })
+    .catch( err => {
+        console.log(err);
+        res.status(500).json({message:`Server error`,error:err})
+    })
 });
 
 server.get("/users", async (req,res) => {
